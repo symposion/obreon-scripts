@@ -36,7 +36,7 @@ describe('WeatherHandler', function () {
           return newWs;
         })
         .then(newWs => {
-          dr.roll.withArgs('1d10').returns(Promise.resolve(5));
+          dr.roll.withArgs('1d10').returns(Promise.resolve(6));
           dr.roll.withArgs('0-1d6-4').returns(Promise.resolve(-10));
           return cm.getNextDayWeatherPromise(newWs);
         })
