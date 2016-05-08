@@ -27,7 +27,7 @@ describe('ObreonScripts', function () {
       roll20Mock.expects('findObjs').withArgs({ type: 'handout' }).returns([prevHandout]);
       roll20Mock.expects('sendChat').withArgs('', 'Journal for 2863/4/18 updated with new entry').once();
       roll20Mock.expects('sendChat').withArgs('',
-        'It\'s 0:14 on Nildem 18th of Canicula in the year 2863 of the new era. ' +
+        'It\'s 14:00 on Nildem 18th of Canicula in the year 2863 of the new era. ' +
         'The moon is waning gibbous. You are at Tinderspring. ' +
         'The weather is largely clear and the maximum temperature is 26');
 
@@ -76,7 +76,7 @@ describe('ObreonScripts', function () {
         .withArgs('', 'Journal for 2863/4/18 completed and new entry started for 2863/4/19');
 
       roll20Mock.expects('sendChat')
-        .withArgs('', 'It\'s 0:12 on Genedem 19th of Canicula in the year 2863 of the new era. ' +
+        .withArgs('', 'It\'s 12:00 on Genedem 19th of Canicula in the year 2863 of the new era. ' +
           'The moon is waning gibbous. You are at Tinderspring. ' +
           'The weather is largely clear and the maximum temperature is 24');
       roll20Mock.expects('createObj').withArgs('handout',
@@ -141,20 +141,20 @@ describe('ObreonScripts', function () {
         .withArgs('', 'Journal for 2863/4/18 completed and new entry started for 2863/4/19');
 
       roll20Mock.expects('sendChat')
-        .withArgs('', 'It\'s 0:12 on Luctadem 20th of Canicula in the year 2863 of the new era. ' +
-          'The moon is waning gibbous. You are at Tinderspring. ' +
+        .withArgs('', 'It\'s 12:00 on Luctadem 20th of Canicula in the year 2863 of the new era. ' +
+          'The moon is waning gibbous. You are at Qidiraethon. ' +
           'The weather is largely clear and the maximum temperature is 23');
       roll20Mock.expects('createObj').withArgs('handout',
         newHandout.props).returns(newHandout);
 
-      return os.recordActivity({ duration: [{ hour: 48 }], text: 'My test text' })
+      return os.recordActivity({ duration: [{ hour: 48 }], text: 'Journey to Qidiraethon', location: 'Qidiraethon' })
         .then(() => {
           roll20Mock.verify();
-          expect(newHandout.props.notes).to.match(/2863\/4\/19 0:00-2863\/4\/20 12:00: My test text \(end\)/);
-          expect(prevHandout.props.notes).to.match(/12:00-23:59: My test text \(start\)/);
+          expect(newHandout.props.notes).to.match(/2863\/4\/19 0:00-2863\/4\/20 12:00: Journey to Qidiraethon \(end\)/);
+          expect(prevHandout.props.notes).to.match(/12:00-23:59: Journey to Qidiraethon \(start\)/);
           expect(newHandout.props.notes)
             .to.match(/The weather is largely clear and the maximum temperature is 24/);
-          expect(newHandout.props.notes).to.match(/Location: Tinderspring/);
+          expect(newHandout.props.notes).to.match(/Location: Qidiraethon/);
           expect(newHandout.props.gmnotes).to.equal(`WEATHER:${JSON.stringify(weather)}`);
         });
     });
@@ -205,7 +205,7 @@ describe('ObreonScripts', function () {
       prevHandout.set('notes', 'Location: Tinderspring<br>0:00-12:00: Bumbled about a bit');
       roll20Mock.expects('findObjs').withArgs({ type: 'handout' }).returns([prevHandout]).atLeast(1);
       roll20Mock.expects('sendChat').withArgs('MotD', '/w player Welcome player!\n' +
-        'It\'s 0:12 on Nildem 18th of Canicula in the year 2863 of the new era. ' +
+        'It\'s 12:00 on Nildem 18th of Canicula in the year 2863 of the new era. ' +
         'The moon is waning gibbous. You are at Tinderspring. ' +
         'The weather is largely clear and the maximum temperature is 26');
       const player = new Roll20Object('player');
