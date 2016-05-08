@@ -156,7 +156,6 @@ describe('ObreonScripts', function () {
             .to.match(/The weather is largely clear and the maximum temperature is 24/);
           expect(newHandout.props.notes).to.match(/Location: Tinderspring/);
           expect(newHandout.props.gmnotes).to.equal(`WEATHER:${JSON.stringify(weather)}`);
-          console.log(newHandout.props);
         });
     });
   });
