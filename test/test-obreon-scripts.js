@@ -9,16 +9,23 @@ const Roll20Object = require('./dummy-roll20-object');
 const DiceRoller = require('../lib/dice-roller');
 const _ = require('underscore');
 const Reporter = require('../lib/reporter');
+const ObreonDate = require('../lib/obreon-date');
 
 function replaceReporter(os) {
   const reporter = new Reporter();
   reporter.report = _.noop;
   reporter.messages = [];
+  reporter.handouts = [];
   const oldMakeMessage = reporter.makeScrollMessage;
   reporter.makeScrollMessage = function makeScrollMessage() {
     const message = oldMakeMessage.apply(this, arguments);
     this.messages.push(message);
     return message;
+  };
+  const oldFrameHandout = reporter.frameHandout;
+  reporter.frameHandout = function frameHandout(entries) {
+    this.handouts.push(entries);
+    return oldFrameHandout.apply(this, arguments);
   };
   os.reporter = reporter;
 }
@@ -38,8 +45,8 @@ describe('ObreonScripts', function () {
 
       const prevHandout = new Roll20Object('handout');
       prevHandout.set('name', 'Journal:2863/4/18');
-      prevHandout.set('gmnotes', 'WEATHER:{"days":[{"temp":"26", "subModel":"base"}]}');
-      prevHandout.set('notes', '0:00-12:00: Bumbled about a bit');
+      prevHandout.set('gmnotes', 'DATA:{"weather":[{"temp":"26", "subModel":"base"}]}');
+      prevHandout.set('notes', 'Event: 0:00-12:00: Bumbled about a bit');
 
 
       roll20Mock.expects('findObjs').withArgs({ type: 'handout' }).returns([prevHandout]);
@@ -47,13 +54,20 @@ describe('ObreonScripts', function () {
       return os.recordActivity({ duration: [{ hour: 2 }], text: 'Did some more stuff', location: 'Tinderspring' })
         .then(() => {
           roll20Mock.verify();
-          expect(prevHandout.props.notes).to.match(/12:00-14:00: Did some more stuff<br>Location: Tinderspring/);
           expect(os.reporter.messages).to.have.lengthOf(1);
           expect(os.reporter.messages[0]).to.have.property('text',
             'Journal for 2863/4/18 updated with new entry<br>' +
             'It\'s 14:00 on Nildem 18th of Cereluna in the year 2863 of the new era. ' +
             'You are at Tinderspring. ' +
             'The weather is largely clear and the maximum temperature is 26');
+          expect(os.reporter.handouts).to.have.length(2);
+          expect(os.reporter.handouts[1]).to.have.length(3);
+          expect(_.omit(os.reporter.handouts[1][1], ['parent'])).to.deep.equal({
+            start: ObreonDate.fromString('2863/4/18 12:00'),
+            end: ObreonDate.fromString('2863/4/18 14:00'),
+            text: 'Did some more stuff',
+            type: 'Event',
+          });
         });
     });
 
@@ -70,13 +84,13 @@ describe('ObreonScripts', function () {
 
       const prevHandout = new Roll20Object('handout');
       prevHandout.set('name', 'Journal:2863/4/18');
-      prevHandout.set('gmnotes', 'WEATHER:{"days":[{"temp":"26", "subModel":"base"}]}');
-      prevHandout.set('notes', 'Location: Tinderspring<br>0:00-12:00: Bumbled about a bit');
+      prevHandout.set('gmnotes', 'DATA:{"weather":[{"temp":"26", "subModel":"base"}]}');
+      prevHandout.set('notes', 'Location: Tinderspring<br>Event: 0:00-12:00: Bumbled about a bit');
       const newHandout = new Roll20Object('handout');
       newHandout.set('name', 'Journal:2863/4/19');
       newHandout.set('inplayerjournals', 'all');
-      const weather = {
-        days: [
+      const data = {
+        weather: [
           {
             date: {
               year: 2863,
@@ -98,18 +112,28 @@ describe('ObreonScripts', function () {
       return os.recordActivity({ duration: [{ hour: 24 }], text: 'My test text' })
         .then(() => {
           roll20Mock.verify();
-          expect(newHandout.props.notes).to.match(/0:00-12:00: My test text \(end\)/);
-          expect(prevHandout.props.notes).to.match(/12:00-23:59: My test text \(start\)/);
-          expect(newHandout.props.notes)
-            .to.match(/The moon is waning gibbous. The weather is largely clear and the maximum temperature is 26/);
-          expect(newHandout.props.notes).to.match(/Location: Tinderspring/);
-          expect(newHandout.props.gmnotes).to.equal(`WEATHER:${JSON.stringify(weather)}`);
+          expect(newHandout.props.gmnotes).to.equal(`DATA:${JSON.stringify(data)}`);
           expect(os.reporter.messages).to.have.lengthOf(1);
           expect(os.reporter.messages[0]).to.have.property('text',
             'Journal for 2863/4/18 completed and new entry started for 2863/4/19<br>' +
             'It\'s 12:00 on Genedem 19th of Cereluna in the year 2863 of the new era. ' +
             'You are at Tinderspring. ' +
             'The weather is clouding over, threat of rain and the maximum temperature is 20');
+          expect(os.reporter.handouts).to.have.lengthOf(4);
+          expect(os.reporter.handouts[3].map(entry => _.omit(entry, ['parent']))).to.deep.equal([
+            { location: 'Tinderspring', type: 'Location' },
+            {
+              date: undefined,
+              type: 'Day Start',
+              weatherText: 'The weather is clouding over, threat of rain and the maximum temperature is 20',
+            },
+            {
+              start: ObreonDate.fromString('2863/4/19 0:00'),
+              end: ObreonDate.fromString('2863/4/19 12:00'),
+              text: 'My test text (end)',
+              type: 'Event',
+            },
+          ]);
         });
     });
 
@@ -126,13 +150,13 @@ describe('ObreonScripts', function () {
 
       const prevHandout = new Roll20Object('handout');
       prevHandout.set('name', 'Journal:2863/4/18');
-      prevHandout.set('gmnotes', 'WEATHER:{"days":[{"temp":"26", "subModel":"base"}]}');
-      prevHandout.set('notes', 'Location: Tinderspring<br>0:00-12:00: Bumbled about a bit');
+      prevHandout.set('gmnotes', 'DATA:{"weather":[{"temp":"26", "subModel":"base"}]}');
+      prevHandout.set('notes', 'Location: Tinderspring<br>Event: 0:00-12:00: Bumbled about a bit');
       const newHandout = new Roll20Object('handout');
       newHandout.set('name', 'Journal:2863/4/19-2863/4/20');
       newHandout.set('inplayerjournals', 'all');
-      const weather = {
-        days: [
+      const data = {
+        weather: [
           {
             date: {
               year: 2863,
@@ -163,18 +187,34 @@ describe('ObreonScripts', function () {
       return os.recordActivity({ duration: [{ hour: 48 }], text: 'Journey to Qidiraethon', location: 'Qidiraethon' })
         .then(() => {
           roll20Mock.verify();
-          expect(newHandout.props.notes).to.match(/2863\/4\/19 0:00-2863\/4\/20 12:00: Journey to Qidiraethon \(end\)/);
-          expect(prevHandout.props.notes).to.match(/12:00-23:59: Journey to Qidiraethon \(start\)/);
-          expect(newHandout.props.notes)
-            .to.match(/The weather is largely clear and the maximum temperature is 24/);
-          expect(newHandout.props.notes).to.match(/Location: Qidiraethon/);
-          expect(newHandout.props.gmnotes).to.equal(`WEATHER:${JSON.stringify(weather)}`);
+          expect(newHandout.props.gmnotes).to.equal(`DATA:${JSON.stringify(data)}`);
           expect(os.reporter.messages).to.have.lengthOf(1);
           expect(os.reporter.messages[0]).to.have.property('text',
             'Journal for 2863/4/18 completed and new entry started for 2863/4/19<br>' +
             'It\'s 12:00 on Luctadem 20th of Cereluna in the year 2863 of the new era. ' +
             'You are at Qidiraethon. ' +
             'The weather is largely clear and the maximum temperature is 23');
+          expect(os.reporter.handouts).to.have.lengthOf(6);
+          expect(os.reporter.handouts[5].map(entry => _.omit(entry, ['parent']))).to.deep.equal([
+            { location: 'on the way to Qidiraethon', type: 'Location' },
+            {
+              date: ObreonDate.fromString('2863/4/19'),
+              type: 'Day Start',
+              weatherText: 'The weather is largely clear and the maximum temperature is 24',
+            },
+            {
+              date: ObreonDate.fromString('2863/4/20'),
+              type: 'Day Start',
+              weatherText: 'The weather is largely clear and the maximum temperature is 23',
+            },
+            {
+              start: ObreonDate.fromString('2863/4/19 0:00'),
+              end: ObreonDate.fromString('2863/4/20 12:00'),
+              text: 'Journey to Qidiraethon (end)',
+              type: 'Event',
+            },
+            { location: 'Qidiraethon', type: 'Location' },
+          ]);
         });
     });
   });
@@ -221,8 +261,8 @@ describe('ObreonScripts', function () {
 
       const prevHandout = new Roll20Object('handout');
       prevHandout.set('name', 'Journal:2863/4/18');
-      prevHandout.set('gmnotes', 'WEATHER:{"days":[{"temp":"26", "subModel":"base"}]}');
-      prevHandout.set('notes', 'Location: Tinderspring<br>0:00-12:00: Bumbled about a bit');
+      prevHandout.set('gmnotes', 'DATA:{"weather":[{"temp":"26", "subModel":"base"}]}');
+      prevHandout.set('notes', 'Location: Tinderspring<br>Event: 0:00-12:00: Bumbled about a bit');
       roll20Mock.expects('findObjs').withArgs({ type: 'handout' }).returns([prevHandout]).atLeast(1);
 
       const player = new Roll20Object('player');
