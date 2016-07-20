@@ -68,7 +68,7 @@ describe('Journal', function () {
   });
 
   describe('rendering', function () {
-    const reporter = new Reporter();
+    const reporter = new Reporter(null, dl);
     it('renders correctly', function () {
       const output = new Roll20Object('handout');
       const j = new Journal('Tinderspring', d('2863/05/01 12:00'));
