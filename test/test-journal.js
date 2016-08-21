@@ -46,6 +46,17 @@ describe('Journal', function () {
     });
   });
 
+  describe('Adding/removing characters', function () {
+    it('Adds and removes characters correctly', function () {
+      const j = new Journal('Tinderspring', d('2863/05/01 12:00'));
+      j.addPartyMembers([1]);
+      j.addPartyMembers([2]);
+      expect(j.getPartyMemberIds()).to.deep.equal([1, 2]);
+      j.removePartyMembers([1]);
+      expect(j.getPartyMemberIds()).to.deep.equal([2]);
+    });
+  });
+
   describe('day splitting', function () {
     it('splits into days correctly', function () {
       const j = new Journal('Tinderspring', d('2863/05/01 12:00'));
